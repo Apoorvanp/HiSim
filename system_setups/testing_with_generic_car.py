@@ -88,8 +88,8 @@ class HouseholdAdvancedHpEvPvBatteryConfig(SystemSetupConfigBase):
     electricity_meter_config: electricity_meter.ElectricityMeterConfig
     advanced_battery_config: advanced_battery_bslib.BatteryConfig
     electricity_controller_config: controller_l2_energy_management_system.EMSConfig
-    ev_charger_controller_config: EVChargerControllerConfig
-    ev_charger_config: EVChargerConfig
+    # ev_charger_controller_config: EVChargerControllerConfig
+    # ev_charger_config: EVChargerConfig
 
     @classmethod
     def get_default(cls):
@@ -116,8 +116,8 @@ class HouseholdAdvancedHpEvPvBatteryConfig(SystemSetupConfigBase):
         pv_config = generic_pv_system.PVSystemConfig.get_scaled_pv_system(
             rooftop_area_in_m2=my_building_information.scaled_rooftop_area_in_m2
         )
-        ev_charger_controller_config = generic_ev_charger.EVChargerControllerConfig.get_default_config()
-        ev_charger_config = generic_ev_charger.EVChargerConfig.get_default_config()
+        # ev_charger_controller_config = generic_ev_charger.EVChargerControllerConfig.get_default_config()
+        # ev_charger_config = generic_ev_charger.EVChargerConfig.get_default_config()
 
         household_config = HouseholdAdvancedHpEvPvBatteryConfig(
             building_type="blub",
@@ -126,7 +126,7 @@ class HouseholdAdvancedHpEvPvBatteryConfig(SystemSetupConfigBase):
             # heatpump_controllable=False,
             # surplus_control=False,
             # surplus_control_building_temperature_modifier=False,
-            surplus_control_car=False,
+            surplus_control_car=True,
             # simulation_parameters=SimulationParameters.one_day_only(2022),
             # total_base_area_in_m2=121.2,
             occupancy_config=loadprofilegenerator_utsp_connector.UtspLpgConnectorConfig(
@@ -194,8 +194,8 @@ class HouseholdAdvancedHpEvPvBatteryConfig(SystemSetupConfigBase):
                 total_pv_power_in_watt_peak=pv_config.power_in_watt
             ),
             electricity_controller_config=(controller_l2_energy_management_system.EMSConfig.get_default_config_ems()),
-            ev_charger_controller_config=ev_charger_controller_config,
-            ev_charger_config=ev_charger_config,
+            # ev_charger_controller_config=ev_charger_controller_config,
+            # ev_charger_config=ev_charger_config,
         )
         # adjust HeatPump
         # household_config.hp_config.group_id = 1  # use modulating heatpump as default
@@ -288,7 +288,7 @@ def setup_function(
 
     # Build Simulation Parameters
     if my_simulation_parameters is None:
-        my_simulation_parameters = SimulationParameters.january_only_with_all_options(
+        my_simulation_parameters = SimulationParameters.one_day_only_with_all_options(
             year=year, seconds_per_timestep=seconds_per_timestep
         )
     # my_simulation_parameters.surplus_control = (
@@ -450,23 +450,23 @@ def setup_function(
         config=my_config.advanced_battery_config,
     )
 
-    my_ev_charging_controller = generic_ev_charger.EVChargerController(
-        my_simulation_parameters=my_simulation_parameters,
-        config=my_config.ev_charger_controller_config,
-    )
+    # my_ev_charging_controller = generic_ev_charger.EVChargerController(
+    #     my_simulation_parameters=my_simulation_parameters,
+    #     config=my_config.ev_charger_controller_config,
+    # )
 
-    my_ev_charger = generic_ev_charger.EVCharger(
-        my_simulation_parameters=my_simulation_parameters,
-        config=EVChargerConfig(
-            name="Wallbox ZAPPI 222TW",
-            manufacturer="myenergi",
-            charger_name="Wallbox ZAPPI 222TW",
-            electric_vehicle=VehiclePure(
-                my_simulation_parameters=my_simulation_parameters,
-                config=VehiclePureConfig.get_default_config(),
-            ),
-        ),
-    )
+    # my_ev_charger = generic_ev_charger.EVCharger(
+    #     my_simulation_parameters=my_simulation_parameters,
+    #     config=EVChargerConfig(
+    #         name="Wallbox ZAPPI 222TW",
+    #         manufacturer="myenergi",
+    #         charger_name="Wallbox ZAPPI 222TW",
+    #         electric_vehicle=VehiclePure(
+    #             my_simulation_parameters=my_simulation_parameters,
+    #             config=VehiclePureConfig.get_default_config(),
+    #         ),
+    #     ),
+    # )
 
 
     # -----------------------------------------------------------------------------------------------------------------
@@ -477,58 +477,58 @@ def setup_function(
     car_battery_controller: L1Controller
     for car, car_battery, car_battery_controller in zip(my_cars, my_car_batteries, my_car_battery_controllers):
         car_battery_controller.connect_only_predefined_connections(car)
-        # car_battery_controller.connect_only_predefined_connections(car_battery)
+        car_battery_controller.connect_only_predefined_connections(car_battery)
         car_battery.connect_only_predefined_connections(car_battery_controller)
 
         # inputs to charging controller from battery (electricity input, state of charge)
-        my_ev_charging_controller.connect_input(
-            input_fieldname=my_ev_charging_controller.StateOfCharge,
-            src_object_name=car_battery.component_name,
-            src_field_name=car_battery.StateOfCharge,
-        )
+        # my_ev_charging_controller.connect_input(
+        #     input_fieldname=my_ev_charging_controller.StateOfCharge,
+        #     src_object_name=car_battery.component_name,
+        #     src_field_name=car_battery.StateOfCharge,
+        # )
         # end section
 
         # inputs to ev charger from battery & ev charging controller
         # from battery - electricity input
         # from ev charging controller - state, mode & minimum state of charge
-        my_ev_charger.connect_input(
-            input_fieldname=my_ev_charger.ElectricityInput,
-            src_object_name=car_battery.component_name,
-            src_field_name=car_battery.AcBatteryPower
-        )
+        # my_ev_charger.connect_input(
+        #     input_fieldname=my_ev_charger.ElectricityInput,
+        #     src_object_name=car_battery.component_name,
+        #     src_field_name=car_battery.AcBatteryPower
+        # )
 
-        my_ev_charger.connect_input(
-            input_fieldname=my_ev_charger.EVChargerState,
-            src_object_name=my_ev_charging_controller.component_name,
-            src_field_name=my_ev_charging_controller.EVChargerState,
-        )
+        # my_ev_charger.connect_input(
+        #     input_fieldname=my_ev_charger.EVChargerState,
+        #     src_object_name=my_ev_charging_controller.component_name,
+        #     src_field_name=my_ev_charging_controller.EVChargerState,
+        # )
 
-        my_ev_charger.connect_input(
-            input_fieldname=my_ev_charger.EVChargerMode,
-            src_object_name=my_ev_charging_controller.component_name,
-            src_field_name=my_ev_charging_controller.EVChargerMode,
-        )
+        # my_ev_charger.connect_input(
+        #     input_fieldname=my_ev_charger.EVChargerMode,
+        #     src_object_name=my_ev_charging_controller.component_name,
+        #     src_field_name=my_ev_charging_controller.EVChargerMode,
+        # )
 
-        my_ev_charger.connect_input(
-            input_fieldname=my_ev_charger.MinimumStateOfCharge,
-            src_object_name=my_ev_charging_controller.component_name,
-            src_field_name=my_ev_charging_controller.MinimumStateOfCharge,
-        )
+        # my_ev_charger.connect_input(
+        #     input_fieldname=my_ev_charger.MinimumStateOfCharge,
+        #     src_object_name=my_ev_charging_controller.component_name,
+        #     src_field_name=my_ev_charging_controller.MinimumStateOfCharge,
+        # )
         # end section
 
         # input to car battery controller from ev charger
         # state of charge and electricity output
-        car_battery_controller.connect_input(
-            input_fieldname=car_battery_controller.StateOfCharge,
-            src_object_name=my_ev_charger.component_name,
-            src_field_name=my_ev_charger.StateOfCharge,
-        )
+        # car_battery_controller.connect_input(
+        #     input_fieldname=car_battery_controller.StateOfCharge,
+        #     src_object_name=my_ev_charger.component_name,
+        #     src_field_name=my_ev_charger.StateOfCharge,
+        # )
 
-        car_battery_controller.connect_input(
-            input_fieldname=car_battery_controller.AcBatteryPower,
-            src_object_name=my_ev_charger.component_name,
-            src_field_name=my_ev_charger.ElectricityOutput,
-        )
+        # car_battery_controller.connect_input(
+        #     input_fieldname=car_battery_controller.AcBatteryPower,
+        #     src_object_name=my_ev_charger.component_name,
+        #     src_field_name=my_ev_charger.ElectricityOutput,
+        # )
         # end section
 
         if my_config.surplus_control_car:
@@ -753,8 +753,8 @@ def setup_function(
     my_sim.add_component(my_electricity_meter)
     my_sim.add_component(my_advanced_battery)
     my_sim.add_component(my_electricity_controller)
-    my_sim.add_component(my_ev_charger)
-    my_sim.add_component(my_ev_charging_controller)
+    # my_sim.add_component(my_ev_charger)
+    # my_sim.add_component(my_ev_charging_controller)
     for car in my_cars:
         my_sim.add_component(car)
     for car_battery in my_car_batteries:
