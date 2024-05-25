@@ -171,7 +171,7 @@ HISIMPATH: Dict[str, Any] = {
         ),
         "siemens_junelight": os.path.join(hisim_abs_path, "inputs", "advanced_battery", "Siemens_Junelight.npy"),
     },
-    "LoadProfileGenerator_export_directory": os.path.join(os.path.join("D:", os.sep, "Work")),
+    "LoadProfileGenerator_export_directory": "/Users/apoorvanp/workspace/HiSim/db",
     "bat_parameter": os.path.join(hisim_abs_path, "inputs", "advanced_battery", "Siemens_Junelight.npy"),
     "modular_household": os.path.join(hisim_abs_path, "modular_household"),
     "price_signal": {
