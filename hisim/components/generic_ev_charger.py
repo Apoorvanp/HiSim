@@ -76,7 +76,7 @@ class EVChargerControllerConfig(cp.ConfigBase):
     @classmethod
     def get_default_config(cls):
         """Gets a default config."""
-        return EVChargerControllerConfig(name="ElectricalChargerController", mode=1)
+        return EVChargerControllerConfig(name="ElectricalChargerController", mode=4)
 
 
 @dataclass_json
@@ -126,7 +126,7 @@ class EVChargerConfig(cp.ConfigBase):
     def get_default_config(cls):
         """Gets a default config."""
         return EVChargerConfig(
-            name="EV_Charger",
+            name="Wallbox ZAPPI 222TW",
             manufacturer="myenergi",
             charger_name="Wallbox ZAPPI 222TW",
             electric_vehicle=None,
@@ -222,7 +222,7 @@ class VehiclePure(cp.Component):
                     data = json.load(file)
                 return data["Values"]
 
-            filepath = utils.load_export_load_profile_generator(target=self.evconfig.profile_name)
+            filepath = utils.load_export_load_profile_generator(target=self.evconfig.profile)
             if filepath is None:
                 filepath = utils.HISIMPATH
 
@@ -233,11 +233,11 @@ class VehiclePure(cp.Component):
             for _, row in filepaths.iterrows():
                 json_info = json.loads(row["Json"])
                 if "Charging" in json_info["FileName"] and "png" not in json_info["FileName"]:
-                    filepath = os.path.normpath(json_info["FullFileName"])
-                    filepath_list = filepath.split(os.sep)
-                    ev_files[filepath_list[-1].split(".")[0]] = json_info["FullFileName"]
+                    filename = os.path.normpath("/Users/apoorvanp/workspace/Load-Generator" + json_info["FullFileName"])
+                    filepath_list = filename.split(os.sep)
+                    ev_files[filepath_list[-1].split(".")[0]] = "/Users/apoorvanp/workspace/Load-Generator",json_info["FullFileName"]
                     list_columns.append(filepath_list[-1].split(".")[0])
-                    list_values.append(open_ev_json(json_info["FullFileName"]))
+                    list_values.append(open_ev_json("/Users/apoorvanp/workspace/Load-Generator" + json_info["FullFileName"]))
             list_values = list(map(list, zip(*list_values)))
             # ev_pd = pd.DataFrame(list_values, columns=list_columns)
 
@@ -259,7 +259,7 @@ class VehiclePure(cp.Component):
             # Gets transportation stats
             transportation_devices_stats = open_sql(filepath["electric_vehicle"][0], "TransportationDeviceStates")
             for _, column in transportation_devices_stats.iterrows():
-                if datetime.datetime.strptime(column["DateTime"], "%d/%m/%Y %H:%M") > datetime.datetime.strptime(
+                if datetime.datetime.strptime(column["DateTime"], "%m/%d/%Y %H:%M") > datetime.datetime.strptime(
                     "31/12/2018 23:59", "%d/%m/%Y %H:%M"
                 ):
                     if (
@@ -358,13 +358,13 @@ class Vehicle(cp.Component):
         )
 
         self.after_capacity_channel: cp.ComponentOutput = self.add_output(
-            self.component_name, self.AfterCapacity, lt.LoadTypes.ANY, lt.Units.WATT
+            self.component_name, self.AfterCapacity, lt.LoadTypes.ANY, lt.Units.WATT, output_description="foo"
         )
         self.max_capacity_channel: cp.ComponentOutput = self.add_output(
-            self.component_name, self.MaxCapacity, lt.LoadTypes.ANY, lt.Units.WATT
+            self.component_name, self.MaxCapacity, lt.LoadTypes.ANY, lt.Units.WATT, output_description="bar"
         )
         self.discharge_channel: cp.ComponentOutput = self.add_output(
-            self.component_name, self.Discharge, lt.LoadTypes.ELECTRICITY, lt.Units.WATT
+            self.component_name, self.Discharge, lt.LoadTypes.ELECTRICITY, lt.Units.WATT, output_description="baz"
         )
 
     def build(self, manufacturer: str, model: str, soc: float) -> None:
@@ -628,16 +628,16 @@ class EVCharger(cp.Component):
         )
 
         self.soc_channel: cp.ComponentOutput = self.add_output(
-            self.component_name, self.StateOfCharge, lt.LoadTypes.ANY, lt.Units.ANY
+            self.component_name, self.StateOfCharge, lt.LoadTypes.ANY, lt.Units.ANY, output_description="foo"
         )
         self.after_capacity_channel: cp.ComponentOutput = self.add_output(
-            self.component_name, self.AfterStoredEnergy, lt.LoadTypes.ANY, lt.Units.ANY
+            self.component_name, self.AfterStoredEnergy, lt.LoadTypes.ANY, lt.Units.ANY, output_description="foo1"
         )
         self.driving_channel: cp.ComponentOutput = self.add_output(
-            self.component_name, self.Driving, lt.LoadTypes.ANY, lt.Units.ANY
+            self.component_name, self.Driving, lt.LoadTypes.ANY, lt.Units.ANY, output_description="foo2"
         )
         self.at_charging_station_channel: cp.ComponentOutput = self.add_output(
-            self.component_name, self.AtChargingStation, lt.LoadTypes.ANY, lt.Units.ANY
+            self.component_name, self.AtChargingStation, lt.LoadTypes.ANY, lt.Units.ANY, output_description="foo3"
         )
         self.electricity_output_channel: cp.ComponentOutput = self.add_output(
             self.component_name,
@@ -645,6 +645,7 @@ class EVCharger(cp.Component):
             lt.LoadTypes.ELECTRICITY,
             lt.Units.WATT,
             sankey_flow_direction=True,
+            output_description="foo4",
         )
 
     def build(
@@ -683,8 +684,12 @@ class EVCharger(cp.Component):
         lines.append(f"Model: {self.name}")
         lines.append(f"Charging Power: {self.charging_power_original} kW")
         lines.append(f"EV Battery Capacity: {self.electric_vehicle.max_capacity * 1e-3}")
-        lines.append(f"Vehicle: {self.electric_vehicle.model}")
+        # lines.append(f"Vehicle: {self.electric_vehicle.model}")
         return lines
+
+    def i_prepare_simulation(self) -> None:
+        """Prepares the simulation."""
+        pass
 
     def i_save_state(self) -> None:
         """Saves the state."""
@@ -876,13 +881,13 @@ class EVChargerController(cp.Component):
             self.mode_extended_description = "WRITE MODE EXTENDED DESCRIPTION HERE!"
 
         # Inputs
-        self.charging_input_channel: cp.ComponentInput = self.add_input(
-            self.component_name,
-            self.ElectricityInput,
-            lt.LoadTypes.ELECTRICITY,
-            lt.Units.WATT,
-            True,
-        )
+        # self.charging_input_channel: cp.ComponentInput = self.add_input(
+        #     self.component_name,
+        #     self.ElectricityInput,
+        #     lt.LoadTypes.ELECTRICITY,
+        #     lt.Units.WATT,
+        #     True,
+        # )
         self.soc_channel: cp.ComponentInput = self.add_input(
             self.component_name,
             self.StateOfCharge,
@@ -892,21 +897,27 @@ class EVChargerController(cp.Component):
         )
 
         self.state_channel: cp.ComponentOutput = self.add_output(
-            self.component_name, self.EVChargerState, lt.LoadTypes.ANY, lt.Units.ANY
+            self.component_name, self.EVChargerState, lt.LoadTypes.ANY, lt.Units.ANY, output_description="foo"
         )
         self.mode_channel: cp.ComponentOutput = self.add_output(
-            self.component_name, self.EVChargerMode, lt.LoadTypes.ANY, lt.Units.ANY
+            self.component_name, self.EVChargerMode, lt.LoadTypes.ANY, lt.Units.ANY, output_description="bar"
         )
         self.min_soc_channel: cp.ComponentOutput = self.add_output(
             self.component_name,
             self.MinimumStateOfCharge,
             lt.LoadTypes.ANY,
             lt.Units.ANY,
+            output_description="baz"
         )
 
     def i_save_state(self) -> None:
         """Saves the state."""
         pass
+
+    def i_prepare_simulation(self) -> None:
+        """Prepares the simulation."""
+    pass
+
 
     def i_restore_state(self) -> None:
         """Restores the state."""

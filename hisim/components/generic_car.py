@@ -6,6 +6,7 @@ Evaluates diesel or electricity consumption based on driven kilometers and proce
 # clean
 
 import datetime as dt
+import glob
 import json
 from dataclasses import dataclass
 from os import listdir, path
@@ -270,7 +271,7 @@ class Car(cp.Component):
             self.meters_driven = dataframe["meters_driven"].tolist()
         else:
             # load car data from LPG output
-            filepaths = listdir(utils.HISIMPATH["utsp_results"])
+            filepaths = glob.glob(utils.HISIMPATH["utsp_results"] + "/**", recursive=True)
             filepath_location = [elem for elem in filepaths if "CarLocation." + self.config.name in elem][0]
             filepath_meters_driven = [elem for elem in filepaths if "DrivingDistance." + self.config.name in elem][0]
             with open(
